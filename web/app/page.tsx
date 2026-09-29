@@ -1,9 +1,44 @@
  "use client";
 import {useEffect,useMemo,useState} from "react";
+
 type GK={concept:string;facts:string[];background:string};
-type Item={id:string;source:string;title:string;url:string;published_at?:string|null;category:string;summary:string;why_important?:string;static_gk?:GK;exam_relevance:string[];verification:string};
+type Item={
+  id:string;source:string;title:string;url:string;published_at?:string|null;
+  category:string;summary:string;why_important?:string;static_gk?:GK;
+  exam_relevance:string[];verification:string
+};
 type Screen="home"|"news"|"practice"|"tutor"|"archive"|"progress";
+
 const cats=["All","National","Polity","Economy","Science & Technology","Environment","Defence","International","Sports","Awards & Culture","Education & Health","Telangana"];
+
+function shortPoints(x:Item){
+  const clean=(s:string)=>s.replace(/\s+/g," ").trim();
+  const base=clean(x.summary||"");
+  const title=clean(x.title||"");
+  const points:string[]=[];
+  if(base && !/^source-observed item/i.test(base)) points.push(base.replace(/\.$/,""));
+  else points.push(`Topic: ${title}`);
+  if(x.why_important) points.push(clean(x.why_important));
+  return points.slice(0,2);
+}
+
+function memoryTip(x:Item){
+  const c=x.category;
+  const tips:Record<string,string>={
+    "Polity":"Remember: WHO + WHAT LAW/ARTICLE + WHY IT MATTERS.",
+    "Economy":"Remember: INSTITUTION + INDICATOR + POLICY TOOL.",
+    "Environment":"Remember: SPECIES/ECOSYSTEM + PLACE + CONVENTION/LAW.",
+    "Science & Technology":"Remember: TECHNOLOGY + PURPOSE + INDIAN INSTITUTION.",
+    "Defence":"Remember: PLATFORM/EXERCISE + SERVICE + PURPOSE.",
+    "International":"Remember: COUNTRY/ORGANISATION + HQ + INDIA'S ROLE.",
+    "Sports":"Remember: EVENT + WINNER/ACHIEVEMENT + VENUE/GOVERNING BODY.",
+    "Awards & Culture":"Remember: AWARD/SITE + PERSON/PLACE + SPECIAL FEATURE.",
+    "Education & Health":"Remember: SCHEME/PROGRAMME + MINISTRY + BENEFICIARIES.",
+    "Telangana":"Remember: DISTRICT/PLACE + DEPARTMENT/SCHEME + TELANGANA LINK.",
+    "National":"Remember: WHAT + WHO + WHERE + WHY."
+  };
+  return tips[c]||tips.National;
+}
 
 export default function Home(){
  const [items,setItems]=useState<Item[]>([]),[cat,setCat]=useState("All"),[q,setQ]=useState(""),[status,setStatus]=useState("Connecting…"),[loading,setLoading]=useState(false),[dark,setDark]=useState(false),[screen,setScreen]=useState<Screen>("home"),[selected,setSelected]=useState<Item|null>(null),[practiceDone,setPracticeDone]=useState(false),[tutorQ,setTutorQ]=useState(""),[tutorA,setTutorA]=useState(""),[from,setFrom]=useState(""),[to,setTo]=useState("");
@@ -13,20 +48,39 @@ export default function Home(){
  const go=(s:Screen)=>{setScreen(s);window.scrollTo({top:0,behavior:"smooth"})};
  const nav=[["home","⌂","Home"],["news","📰","News"],["practice","📝","Practice"],["tutor","🤖","Tutor"],["archive","📚","Archive"]] as const;
  return <main className={dark?"app dark":"app"}>
-  <header className="top"><div className="bar"><div className="logo">EI</div><div className="brand"><b>Exam Intelligence</b><small>Current Affairs · Static GK · Exams · AI Tutor</small></div><div className="actions"><button onClick={()=>setDark(v=>!v)}>◐</button><button onClick={load} disabled={loading}>{loading?"…":"↻"}</button></div></div></header>
-  {screen==="home"&&<><section className="hero"><div className="eyebrow">Daily Command Center</div><h1>Good morning, aspirant 👋</h1><p>Live-source current affairs → Static GK → exam relevance → revision.</p><p style={{fontSize:11}}>● {status} · auto-refresh every minute while app is active</p><div className="stats"><div className="stat"><b>{shown.length}</b><span>Visible stories</span></div><div className="stat"><b>{items.filter(x=>x.exam_relevance?.includes("UPSC")).length}</b><span>UPSC tagged</span></div><div className="stat"><b>{items.filter(x=>x.category==="Telangana").length}</b><span>Telangana</span></div><div className="stat"><b>Live</b><span>API mode</span></div></div></section><div className="notice">Daily edition shows recent items. Use Archive for date-specific retrieval of older news.</div><Edition q={q} setQ={setQ} cat={cat} setCat={setCat} from={from} setFrom={setFrom} to={to} setTo={setTo} load={load} loading={loading}/><NewsGrid items={shown} onOpen={setSelected}/><Learning go={go}/></>}
+  <header className="top"><div className="bar"><div className="logo">EI</div><div className="brand"><b>Exam Intelligence</b><small>Simple English · Static GK · Exams · AI Tutor</small></div><div className="actions"><button onClick={()=>setDark(v=>!v)}>◐</button><button onClick={load} disabled={loading}>{loading?"…":"↻"}</button></div></div></header>
+
+  {screen==="home"&&<><section className="hero"><div className="eyebrow">Daily Command Center</div><h1>Today's Current Affairs</h1><p>Simple points → Static GK → Prelims memory → Mains connection.</p><p style={{fontSize:11}}>● {status} · auto-refresh every minute while app is active</p><div className="stats"><div className="stat"><b>{shown.length}</b><span>Stories</span></div><div className="stat"><b>{items.filter(x=>x.exam_relevance?.includes("UPSC")).length}</b><span>UPSC tagged</span></div><div className="stat"><b>{items.filter(x=>x.category==="Telangana").length}</b><span>Telangana</span></div><div className="stat"><b>LIVE</b><span>Source API</span></div></div></section><div className="notice"><b>Study mode:</b> Open any story. The app breaks it into short, easy-to-remember points instead of newspaper-style language.</div><Edition q={q} setQ={setQ} cat={cat} setCat={setCat} from={from} setFrom={setFrom} to={to} setTo={setTo} load={load} loading={loading}/><NewsGrid items={shown} onOpen={setSelected}/><Learning go={go}/></>}
+
   {screen==="news"&&<ScreenWrap title="News"><Edition q={q} setQ={setQ} cat={cat} setCat={setCat} from={from} setFrom={setFrom} to={to} setTo={setTo} load={load} loading={loading}/><NewsGrid items={shown} onOpen={setSelected}/></ScreenWrap>}
-  {screen==="practice"&&<ScreenWrap title="Prelims Practice"><div className="card"><span className="tag">Practice engine</span><h3>{practiceDone?"Session complete 🎉":"Current Affairs Practice"}</h3><p>{practiceDone?"You can restart or return to News.":"Practice will be grounded in the same live current-affairs records."}</p><button className="btn full" onClick={()=>setPracticeDone(v=>!v)}>{practiceDone?"Restart":"Start practice"}</button></div></ScreenWrap>}
+  {screen==="practice"&&<ScreenWrap title="Prelims Practice"><div className="card"><span className="tag">Practice engine</span><h3>{practiceDone?"Session complete 🎉":"Current Affairs Practice"}</h3><p>Practice will be grounded in the same live current-affairs records.</p><button className="btn full" onClick={()=>setPracticeDone(v=>!v)}>{practiceDone?"Restart":"Start practice"}</button></div></ScreenWrap>}
   {screen==="tutor"&&<ScreenWrap title="AI Tutor"><div className="card"><span className="tag">Tutor</span><h3>Ask about your preparation</h3><input className="search" value={tutorQ} onChange={e=>setTutorQ(e.target.value)} placeholder="Ask a question…"/><button className="btn full" onClick={()=>setTutorA(tutorQ?"Question received: "+tutorQ:"Type a question first.")}>Ask Tutor</button>{tutorA&&<div className="notice" style={{marginTop:10}}>{tutorA}</div>}</div></ScreenWrap>}
-  {screen==="archive"&&<ScreenWrap title="Historical Archive"><div className="card"><b>Search any date or date range</b><p>Older news is fetched on demand from the historical news index.</p><input className="search" type="date" value={from} onChange={e=>setFrom(e.target.value)}/><input className="search" type="date" value={to} onChange={e=>setTo(e.target.value)}/><input className="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Optional keyword e.g. ISRO, GI tag, RBI…"/><button className="btn full" onClick={()=>{go("news");load()}}>Fetch archive</button></div><div className="grid" style={{marginTop:12}}>{["2026","2025","2024","2023","2022"].map(y=><button className="learn" key={y} onClick={()=>{setFrom(y+"-01-01");setTo(y+"-12-31");setQ("");go("news");setTimeout(load,0)}}><div className="ico">📅</div><div><b>{y}</b><small>Fetch full year</small></div><i>→</i></button>)}</div></ScreenWrap>}
+  {screen==="archive"&&<ScreenWrap title="Historical Archive"><div className="card"><b>Find old current affairs</b><p>Choose an exact date or date range. Older records are fetched on demand.</p><input className="search" type="date" value={from} onChange={e=>setFrom(e.target.value)}/><input className="search" type="date" value={to} onChange={e=>setTo(e.target.value)}/><input className="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Keyword: ISRO, RBI, GI tag…"/><button className="btn full" onClick={()=>{go("news");setTimeout(load,50)}}>Fetch historical news</button></div><div className="grid" style={{marginTop:12}}>{["2026","2025","2024","2023","2022"].map(y=><button className="learn" key={y} onClick={()=>{setFrom(y+"-01-01");setTo(y+"-12-31");setQ("");go("news");setTimeout(load,100)}}><div className="ico">📅</div><div><b>{y}</b><small>Fetch year</small></div><i>→</i></button>)}</div></ScreenWrap>}
   {screen==="progress"&&<ScreenWrap title="Progress"><div className="grid"><div className="card"><span className="tag">Current affairs</span><h3>{items.length} loaded</h3><p>Records currently returned by the live API.</p></div><div className="card"><span className="tag">Practice</span><h3>{practiceDone?"Completed":"Not started"}</h3></div></div></ScreenWrap>}
-  {selected&&<div className="modal" onClick={()=>setSelected(null)}><div className="modalbox" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setSelected(null)}>×</button><span className="tag">{selected.category}</span><h2>{selected.title}</h2><p>{selected.summary}</p>{selected.why_important&&<><h3>Why important</h3><p>{selected.why_important}</p></>}<h3>Static GK</h3>{selected.static_gk?<><b>{selected.static_gk.concept}</b><ul>{selected.static_gk.facts.map((f,i)=><li key={i}>{f}</li>)}</ul><p><b>Background:</b> {selected.static_gk.background}</p></>:<p>Static GK not available for this record.</p>}<div className="meta">{selected.source} · {selected.verification} · {(selected.exam_relevance||[]).join(" · ")}</div>{selected.url&&<a className="btn full" href={selected.url} target="_blank" rel="noreferrer">Open source</a>}</div></div>}
+
+  {selected&&<StudySheet item={selected} close={()=>setSelected(null)}/>}
   <nav className="bottom">{nav.map(([id,icon,label])=><button key={id} className={screen===id?"active":""} onClick={()=>go(id)}><span>{icon}</span><span>{label}</span></button>)}<button onClick={()=>go("progress")}><span>📊</span><span>Progress</span></button></nav>
  </main>
 }
 
-function Edition({q,setQ,cat,setCat,from,setFrom,to,setTo,load,loading}:{q:string;setQ:(x:string)=>void;cat:string;setCat:(x:string)=>void;from:string;setFrom:(x:string)=>void;to:string;setTo:(x:string)=>void;load:()=>void;loading:boolean}){return <section className="section"><div className="head"><h2>{from?"Archive results":"Today’s edition"}</h2><button onClick={load}>{loading?"Refreshing…":"Refresh"}</button></div><input className="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search current affairs…"/><div className="dateRow"><input className="search" type="date" value={from} onChange={e=>setFrom(e.target.value)}/><input className="search" type="date" value={to} onChange={e=>setTo(e.target.value)}/></div><div className="chips" style={{marginTop:9}}>{cats.map(c=><button className={cat===c?"chip active":"chip"} key={c} onClick={()=>setCat(c)}>{c}</button>)}</div></section>}
+function StudySheet({item,close}:{item:Item;close:()=>void}){
+ const points=shortPoints(item);
+ return <div className="modal" onClick={close}><div className="modalbox study" onClick={e=>e.stopPropagation()}>
+   <button className="close" onClick={close}>×</button>
+   <span className="tag">{item.category}</span>
+   <h2>{item.title}</h2>
+   <div className="studyBlock"><h3>1. What happened?</h3><ul>{points.map((p,i)=><li key={i}>{p}</li>)}</ul></div>
+   <div className="studyBlock"><h3>2. Why is it important?</h3><p>{item.why_important||"Relevant for General Studies and current-affairs based questions."}</p></div>
+   <div className="studyBlock"><h3>3. Static GK — remember these</h3>{item.static_gk?<><div className="gkConcept">{item.static_gk.concept}</div><ul>{item.static_gk.facts.map((f,i)=><li key={i}>{f}</li>)}</ul><p><b>Background:</b> {item.static_gk.background}</p></>:<p>Static GK is not available for this record.</p>}</div>
+   <div className="memory"><b>🧠 Easy memory rule</b><p>{memoryTip(item)}</p></div>
+   <div className="studyBlock"><h3>4. Exam use</h3><div className="chips">{(item.exam_relevance||[]).map(t=><span className="chip active" key={t}>{t}</span>)}</div></div>
+   <div className="meta">{item.source} · {item.verification}{item.published_at?` · ${new Date(item.published_at).toLocaleString("en-IN")}`:""}</div>
+   <a className="btn full" href={item.url} target="_blank" rel="noreferrer">Open original source</a>
+ </div></div>
+}
+
+function Edition({q,setQ,cat,setCat,from,setFrom,to,setTo,load,loading}:{q:string;setQ:(x:string)=>void;cat:string;setCat:(x:string)=>void;from:string;setFrom:(x:string)=>void;to:string;setTo:(x:string)=>void;load:()=>void;loading:boolean}){return <section className="section"><div className="head"><h2>{from?"Archive results":"Today's edition"}</h2><button onClick={load}>{loading?"Refreshing…":"Refresh"}</button></div><input className="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search current affairs…"/><div className="dateRow"><input className="search" type="date" value={from} onChange={e=>setFrom(e.target.value)}/><input className="search" type="date" value={to} onChange={e=>setTo(e.target.value)}/></div><div className="chips" style={{marginTop:9}}>{cats.map(c=><button className={cat===c?"chip active":"chip"} key={c} onClick={()=>setCat(c)}>{c}</button>)}</div></section>}
 
 function ScreenWrap({title,children}:{title:string;children:React.ReactNode}){return <section className="section" style={{paddingBottom:90}}><div className="head"><h2>{title}</h2></div>{children}</section>}
-function NewsGrid({items,onOpen}:{items:Item[];onOpen:(x:Item)=>void}){return <section className="section"><div className="head"><h2>Current affairs</h2><span style={{fontSize:10,color:"#667085"}}>{items.length} results</span></div><div className="grid">{items.length===0?<div className="card"><h3>No records found</h3><p>Try Refresh, another category, a keyword, or a historical date range.</p></div>:items.map(x=><article className="card" key={x.id}><span className="tag">{x.category}</span><h3>{x.title}</h3><p>{x.summary}</p><div className="meta">{x.source} · {x.verification} · {(x.exam_relevance||[]).join(" · ")}</div><button className="btn full" onClick={()=>onOpen(x)}>Read + Static GK</button></article>)}</div></section>}
+function NewsGrid({items,onOpen}:{items:Item[];onOpen:(x:Item)=>void}){return <section className="section"><div className="head"><h2>Current affairs</h2><span style={{fontSize:10,color:"#667085"}}>{items.length} results</span></div><div className="grid">{items.length===0?<div className="card"><h3>No records found</h3><p>Try Refresh, another category, a keyword, or a historical date range.</p></div>:items.map(x=><article className="card" key={x.id}><span className="tag">{x.category}</span><h3>{x.title}</h3><p>{shortPoints(x)[0]}</p><div className="meta">{x.source} · {x.verification} · {(x.exam_relevance||[]).join(" · ")}</div><button className="btn full" onClick={()=>onOpen(x)}>📖 Open study notes</button></article>)}</div></section>}
 function Learning({go}:{go:(s:Screen)=>void}){return <section className="section"><div className="head"><h2>Learning</h2></div><div className="grid"><button className="learn" onClick={()=>go("practice")}><div className="ico">📝</div><div><b>Prelims Practice</b><small>Grounded questions</small></div><i>→</i></button><button className="learn" onClick={()=>go("tutor")}><div className="ico">🤖</div><div><b>AI Tutor</b><small>Teach → check → retest</small></div><i>→</i></button><button className="learn" onClick={()=>go("archive")}><div className="ico">📚</div><div><b>Archive</b><small>Year → month → date</small></div><i>→</i></button><button className="learn" onClick={()=>go("progress")}><div className="ico">📊</div><div><b>Progress</b><small>Session progress</small></div><i>→</i></button></div></section>}
