@@ -1,0 +1,9 @@
+{
+  "name": "Exam Intelligence",
+  "short_name": "Exam Intelligence",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0b1220",
+  "icons": []
+}

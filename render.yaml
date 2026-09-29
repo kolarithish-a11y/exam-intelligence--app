@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: exam-intelligence-api
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    healthCheckPath: /health
+    plan: free
+  - type: web
+    name: exam-intelligence-web
+    runtime: docker
+    dockerfilePath: ./web/Dockerfile
+    dockerContext: ./web
+    healthCheckPath: /
+    plan: free
+    envVars:
+      - key: API_INTERNAL_URL
+        fromService:
+          type: web
+          name: exam-intelligence-api
+          envVarKey: RENDER_EXTERNAL_URL

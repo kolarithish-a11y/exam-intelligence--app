@@ -1,0 +1,11 @@
+{
+  "name": "Exam Intelligence \u2014 Daily Current Affairs",
+  "short_name": "Exam Intelligence",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0b1220",
+  "description": "Mobile-first current affairs, exam practice, archive and AI learning companion.",
+  "icons": []
+}

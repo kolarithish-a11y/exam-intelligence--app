@@ -1,0 +1,13 @@
+services:
+  api:
+    build: ./server
+    ports: ["8000:8000"]
+    environment:
+      PORT: 8000
+  web:
+    build:
+      context: ./web
+      args:
+        API_INTERNAL_URL: http://api:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
